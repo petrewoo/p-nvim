@@ -1,0 +1,26 @@
+# Neovim
+nvim/plugin/
+nvim/lazy-lock.json
+
+# Undo files
+nvim/undo/
+
+# Session files
+nvim/sessions/
+
+# LSP logs
+nvim/lsp.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~
