@@ -13,7 +13,11 @@
       "Bash(SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk make:*)",
       "Bash(sw_vers:*)",
       "Bash(cc:*)",
-      "Bash(readlink:*)"
+      "Bash(readlink:*)",
+      "Bash(shellcheck:*)",
+      "Bash(for script in install.sh uninstall.sh fix-compile-headers.sh setup-sdk.sh)",
+      "Bash(do )",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

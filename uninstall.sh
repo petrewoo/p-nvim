@@ -76,7 +76,8 @@ show_disk_usage() {
     local total=0
     for dir in ~/.config/nvim ~/.local/share/nvim ~/.cache/nvim ~/.local/state/nvim; do
         if [ -d "$dir" ]; then
-            local size=$(du -sk "$dir" 2>/dev/null | cut -f1)
+            local size
+            size=$(du -sk "$dir" 2>/dev/null | cut -f1)
             total=$((total + size))
         fi
     done
@@ -93,7 +94,8 @@ show_disk_usage() {
 
 # 备份配置
 backup_config() {
-    local backup_name="nvim-backup-$(date +%Y%m%d_%H%M%S)"
+    local backup_name
+    backup_name="nvim-backup-$(date +%Y%m%d_%H%M%S)"
     local backup_dir="$HOME/$backup_name"
 
     print_info "备份配置到: $backup_dir"
@@ -161,7 +163,7 @@ full_uninstall() {
     echo "  - ~/.local/state/nvim"
     echo
 
-    read -p "确定要继续吗? (输入 'yes' 确认): " confirm
+    read -r -p "确定要继续吗? (输入 'yes' 确认): " confirm
     if [ "$confirm" != "yes" ]; then
         print_info "取消操作"
         return
@@ -285,10 +287,11 @@ reset_to_initial() {
     print_success "已清理所有文件"
 
     # 检查是否有安装脚本
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$script_dir/install.sh" ]; then
         print_info "重新运行安装脚本..."
-        read -p "按 Enter 继续安装..."
+        read -r -p "按 Enter 继续安装..."
         "$script_dir/install.sh"
     else
         print_warning "未找到 install.sh，请手动重新安装"
@@ -310,7 +313,7 @@ clean_specific() {
     echo "0) 返回主菜单"
     echo
 
-    read -p "请选择 [0-7]: " choice
+    read -r -p "请选择 [0-7]: " choice
 
     case $choice in
         1)
@@ -353,7 +356,7 @@ clean_specific() {
             ;;
     esac
 
-    read -p "按 Enter 继续..."
+    read -r -p "按 Enter 继续..."
 }
 
 # 主函数
@@ -362,7 +365,7 @@ main() {
 
     while true; do
         show_menu
-        read -p "请选择 [0-7]: " choice
+        read -r -p "请选择 [0-7]: " choice
 
         case $choice in
             1)
@@ -396,7 +399,7 @@ main() {
         esac
 
         echo
-        read -p "按 Enter 继续..."
+        read -r -p "按 Enter 继续..."
     done
 }
 

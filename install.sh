@@ -223,7 +223,7 @@ install_optional_tools() {
                     if command_exists apt-get; then
                         sudo apt-get install -y fd-find
                         # 创建软链接
-                        sudo ln -sf $(which fdfind) /usr/local/bin/fd 2>/dev/null || true
+                        sudo ln -sf "$(which fdfind)" /usr/local/bin/fd 2>/dev/null || true
                     elif command_exists pacman; then
                         sudo pacman -S fd --noconfirm
                     fi
@@ -247,9 +247,10 @@ backup_existing_config() {
 
     if [ -d "$nvim_config" ] || [ -L "$nvim_config" ]; then
         print_warning "检测到现有的 Neovim 配置"
-        local backup_dir="$HOME/.config/nvim.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_dir
+        backup_dir="$HOME/.config/nvim.backup.$(date +%Y%m%d_%H%M%S)"
 
-        read -p "是否要备份现有配置? (y/n) " -n 1 -r
+        read -r -p "是否要备份现有配置? (y/n) " -n 1
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             print_info "备份到: $backup_dir"
@@ -265,10 +266,11 @@ backup_existing_config() {
     local nvim_data="$HOME/.local/share/nvim"
     if [ -d "$nvim_data" ]; then
         print_info "检测到现有的 Neovim 数据目录"
-        read -p "是否要清理旧的插件和数据? (推荐) (y/n) " -n 1 -r
+        read -r -p "是否要清理旧的插件和数据? (推荐) (y/n) " -n 1
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            local data_backup="$HOME/.local/share/nvim.backup.$(date +%Y%m%d_%H%M%S)"
+            local data_backup
+            data_backup="$HOME/.local/share/nvim.backup.$(date +%Y%m%d_%H%M%S)"
             print_info "备份到: $data_backup"
             mv "$nvim_data" "$data_backup"
             print_success "数据目录备份完成"
@@ -280,7 +282,8 @@ backup_existing_config() {
 install_config() {
     print_info "安装 P-Nvim 配置..."
 
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local nvim_config="$HOME/.config/nvim"
 
     # 创建配置目录
@@ -444,24 +447,26 @@ first_launch() {
     print_warning "首次启动将自动安装所有插件，可能需要几分钟时间"
     print_info "请耐心等待，安装完成后 Neovim 会自动退出"
 
-    read -p "按 Enter 继续..."
+    read -r -p "按 Enter 继续..."
 
     # 在 macOS 上使用 SDK 环境变量（如果已配置）
     if [[ "$OS" == "macos" ]] && [ -n "$SDKROOT" ]; then
         print_info "使用 SDK: $SDKROOT"
         print_info "启动 Neovim 安装插件..."
-        SDKROOT="$SDKROOT" \
-        CPATH="$CPATH" \
-        CPPFLAGS="-isysroot $SDKROOT" \
-        LDFLAGS="-L$SDKROOT/usr/lib" \
-        nvim --headless "+Lazy! sync" +qa
+        env SDKROOT="$SDKROOT" \
+            CPATH="$CPATH" \
+            CPPFLAGS="-isysroot $SDKROOT" \
+            LDFLAGS="-L$SDKROOT/usr/lib" \
+            nvim --headless "+Lazy! sync" +qa
+        exit_code=$?
     else
         # 首次启动让 lazy.nvim 安装插件
         print_info "启动 Neovim 安装插件..."
         nvim --headless "+Lazy! sync" +qa
+        exit_code=$?
     fi
 
-    if [ $? -eq 0 ]; then
+    if [ "$exit_code" -eq 0 ]; then
         print_success "插件安装完成"
     else
         print_warning "插件安装可能遇到问题"
