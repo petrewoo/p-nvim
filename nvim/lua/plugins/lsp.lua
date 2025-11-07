@@ -23,20 +23,6 @@ return {
         }
       })
 
-      require('mason-lspconfig').setup({
-        ensure_installed = {
-          'lua_ls',
-          'pyright',
-          'tsserver',
-          'rust_analyzer',
-          'gopls',
-          'bashls',
-          'jsonls',
-          'yamlls',
-        },
-        automatic_installation = true,
-      })
-
       -- LSP keymaps
       local on_attach = function(client, bufnr)
         local opts = { noremap = true, silent = true, buffer = bufnr }
@@ -84,85 +70,80 @@ return {
         vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
       end
 
-      -- LSP server configurations
-      local lspconfig = require('lspconfig')
-
-      -- Lua
-      lspconfig.lua_ls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          Lua = {
-            diagnostics = {
-              globals = { 'vim' }
-            },
-            workspace = {
-              library = vim.api.nvim_get_runtime_file('', true),
-              checkThirdParty = false,
-            },
-            telemetry = {
-              enable = false,
-            },
-          },
+      -- Setup mason-lspconfig with handlers
+      require('mason-lspconfig').setup({
+        ensure_installed = {
+          'lua_ls',
+          'pyright',
+          'ts_ls',  -- Updated from tsserver (deprecated in lspconfig 0.2.1)
+          'rust_analyzer',
+          'gopls',
+          'bashls',
+          'jsonls',
+          'yamlls',
         },
-      })
+        automatic_installation = true,
+        handlers = {
+          -- Default handler for all servers
+          function(server_name)
+            require('lspconfig')[server_name].setup({
+              on_attach = on_attach,
+              capabilities = capabilities,
+            })
+          end,
 
-      -- Python
-      lspconfig.pyright.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          python = {
-            analysis = {
-              typeCheckingMode = 'basic',
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-            }
-          }
-        }
-      })
+          -- Custom handlers for specific servers
+          ['lua_ls'] = function()
+            require('lspconfig').lua_ls.setup({
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                Lua = {
+                  diagnostics = {
+                    globals = { 'vim' }
+                  },
+                  workspace = {
+                    library = vim.api.nvim_get_runtime_file('', true),
+                    checkThirdParty = false,
+                  },
+                  telemetry = {
+                    enable = false,
+                  },
+                },
+              },
+            })
+          end,
 
-      -- JavaScript/TypeScript
-      lspconfig.tsserver.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
+          ['pyright'] = function()
+            require('lspconfig').pyright.setup({
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                python = {
+                  analysis = {
+                    typeCheckingMode = 'basic',
+                    autoSearchPaths = true,
+                    useLibraryCodeForTypes = true,
+                  }
+                }
+              }
+            })
+          end,
 
-      -- Go
-      lspconfig.gopls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-
-      -- Rust
-      lspconfig.rust_analyzer.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          ['rust-analyzer'] = {
-            checkOnSave = {
-              command = 'clippy',
-            },
-          },
+          ['rust_analyzer'] = function()
+            require('lspconfig').rust_analyzer.setup({
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                ['rust-analyzer'] = {
+                  checkOnSave = {
+                    command = 'clippy',
+                  },
+                },
+              },
+            })
+          end,
         },
-      })
-
-      -- Bash
-      lspconfig.bashls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-
-      -- JSON
-      lspconfig.jsonls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-
-      -- YAML
-      lspconfig.yamlls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
       })
     end,
   },
