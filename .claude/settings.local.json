@@ -3,7 +3,17 @@
     "allow": [
       "Bash(tree:*)",
       "Bash(chmod:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(brew install:*)",
+      "Bash(fc-list:*)",
+      "Bash(nvim:*)",
+      "Bash(xcode-select:*)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(xcrun:*)",
+      "Bash(SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk make:*)",
+      "Bash(sw_vers:*)",
+      "Bash(cc:*)",
+      "Bash(readlink:*)"
     ],
     "deny": [],
     "ask": []

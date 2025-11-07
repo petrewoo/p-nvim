@@ -47,7 +47,8 @@ show_menu() {
     echo "3) 只清理缓存和插件 (保留配置)"
     echo "4) 清理插件缓存 (保留配置和数据)"
     echo "5) 重置为初始状态 (重新安装)"
-    echo "6) 显示当前占用空间"
+    echo "6) 清理 Shell SDK 配置 (仅清理 P-Nvim 添加的 SDK 设置)"
+    echo "7) 显示当前占用空间"
     echo "0) 退出"
     echo
 }
@@ -105,6 +106,45 @@ backup_config() {
     print_success "备份完成: $backup_dir"
 }
 
+# 清理 Shell 配置中的 SDK 设置
+clean_sdk_config() {
+    print_info "检查 Shell 配置中的 SDK 设置..."
+
+    # 确定 shell 配置文件
+    local shell_configs=()
+    [ -f ~/.zshrc ] && shell_configs+=("$HOME/.zshrc")
+    [ -f ~/.bashrc ] && shell_configs+=("$HOME/.bashrc")
+    [ -f ~/.profile ] && shell_configs+=("$HOME/.profile")
+
+    local cleaned=0
+    for config in "${shell_configs[@]}"; do
+        # 检查是否有 P-Nvim 添加的 SDK 配置
+        if grep -q "# P-Nvim.*SDK" "$config" 2>/dev/null; then
+            print_info "在 $config 中发现 P-Nvim SDK 配置"
+            read -p "是否要移除? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # 移除 P-Nvim 添加的 SDK 配置块
+                # 匹配从 "# P-Nvim.*SDK" 到 "# END P-Nvim SDK Config" 的整个块
+                sed -i.bak '/# P-Nvim.*SDK/,/# END P-Nvim SDK Config/d' "$config"
+
+                # 也移除可能在 SDKROOT 行后添加的 CPATH 注释
+                sed -i.bak '/# P-Nvim: for Neovim plugins compilation/d' "$config"
+
+                rm -f "${config}.bak"
+                print_success "已从 $config 移除 SDK 配置"
+                cleaned=1
+            fi
+        fi
+    done
+
+    if [ $cleaned -eq 0 ]; then
+        print_info "未发现 P-Nvim 添加的 SDK 配置"
+    else
+        print_info "SDK 配置已清理，建议重新打开终端使更改生效"
+    fi
+}
+
 # 完全卸载
 full_uninstall() {
     print_warning "这将删除所有 P-Nvim 相关文件！"
@@ -140,6 +180,10 @@ full_uninstall() {
 
     rm -rf ~/.local/state/nvim
     print_success "删除状态目录"
+
+    # 清理 SDK 配置
+    echo
+    clean_sdk_config
 
     print_success "P-Nvim 已完全卸载！"
 }
@@ -318,7 +362,7 @@ main() {
 
     while true; do
         show_menu
-        read -p "请选择 [0-6]: " choice
+        read -p "请选择 [0-7]: " choice
 
         case $choice in
             1)
@@ -337,6 +381,9 @@ main() {
                 reset_to_initial
                 ;;
             6)
+                clean_sdk_config
+                ;;
+            7)
                 show_disk_usage
                 ;;
             0)
@@ -344,7 +391,7 @@ main() {
                 exit 0
                 ;;
             *)
-                print_error "无效选择，请输入 0-6"
+                print_error "无效选择，请输入 0-7"
                 ;;
         esac
 

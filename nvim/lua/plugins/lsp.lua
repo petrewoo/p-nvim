@@ -174,7 +174,8 @@ return {
     keys = {
       { '<leader>m', '<cmd>Mason<cr>', desc = 'Mason' },
     },
-    build = ':MasonUpdate',
+    -- Remove build command - MasonUpdate is not available during build
+    -- Users can run :MasonUpdate manually after installation
   },
 
   -- Mason LSP config bridge

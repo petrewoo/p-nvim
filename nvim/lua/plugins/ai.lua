@@ -10,11 +10,15 @@ return {
     opts = {
       provider = "claude",
       auto_suggestions_provider = "claude",
-      claude = {
-        endpoint = "https://api.anthropic.com",
-        model = "claude-sonnet-4-5-20250929",
-        temperature = 0,
-        max_tokens = 8000,
+      providers = {
+        claude = {
+          endpoint = "https://api.anthropic.com",
+          model = "claude-sonnet-4-5-20250929",
+          extra_request_body = {
+            temperature = 0,
+            max_tokens = 8000,
+          },
+        },
       },
       behaviour = {
         auto_suggestions = false,

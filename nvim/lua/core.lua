@@ -1,8 +1,8 @@
 -- [[ ---------------- `core.lua` config file ---------------- ]]
 
 -- [[ ---------------- General Settings ---------------- ]]
-vim.g.mapleader = ','
-vim.g.maplocalleader = ','
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '
 
 vim.opt.history = 2000
 vim.opt.backup = false
@@ -85,9 +85,8 @@ vim.opt.splitbelow = true
 vim.opt.splitright = true
 
 -- [[ ---------------- File Encoding Settings ---------------- ]]
-vim.opt.encoding = 'utf-8'
+-- Neovim always uses UTF-8 internally, encoding option is not needed
 vim.opt.fileencodings = 'utf-8,ucs-bom,gb18030,gbk,gb2312,cp936'
-vim.opt.termencoding = 'utf-8'
 vim.opt.fileformats = 'unix,dos,mac'
 
 -- [[ ---------------- Completion Settings ---------------- ]]
@@ -105,7 +104,7 @@ vim.cmd('filetype plugin indent on')
 -- Set colorscheme (will be applied after plugins load)
 vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
-    pcall(vim.cmd, 'colorscheme solarized')
+    pcall(vim.cmd, 'colorscheme nord')
   end
 })
 

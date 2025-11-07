@@ -311,7 +311,8 @@ install_nerd_font() {
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 print_info "安装 Hack Nerd Font..."
-                brew tap homebrew/cask-fonts
+                # 新版 Homebrew 不再需要 tap homebrew/cask-fonts
+                # 字体已经整合到主仓库中
                 brew install --cask font-hack-nerd-font
                 print_success "Nerd Font 安装完成"
                 print_warning "请在终端设置中将字体改为 'Hack Nerd Font'"
@@ -348,6 +349,95 @@ install_nerd_font() {
     fi
 }
 
+# 配置 macOS SDK (仅 macOS)
+setup_macos_sdk() {
+    if [[ "$OS" != "macos" ]]; then
+        return
+    fi
+
+    print_info "检查 macOS SDK 配置..."
+
+    # 确定 shell 配置文件
+    if [ -f ~/.zshrc ]; then
+        SHELL_CONFIG=~/.zshrc
+    elif [ -f ~/.bashrc ]; then
+        SHELL_CONFIG=~/.bashrc
+    else
+        SHELL_CONFIG=~/.profile
+    fi
+
+    # 检查是否已经配置了 SDKROOT
+    if grep -q "^export SDKROOT=" "$SHELL_CONFIG" 2>/dev/null; then
+        EXISTING_SDKROOT=$(grep "^export SDKROOT=" "$SHELL_CONFIG" | head -1)
+        CONFIGURED_SDK=$(echo "$EXISTING_SDKROOT" | sed 's/export SDKROOT=//' | tr -d '"' | tr -d "'")
+
+        if [ -d "$CONFIGURED_SDK" ]; then
+            print_success "SDK 已正确配置: $CONFIGURED_SDK"
+
+            # 检查是否有 CPATH 配置
+            if ! grep -q "^export CPATH=.*SDKROOT" "$SHELL_CONFIG" 2>/dev/null; then
+                print_info "添加 CPATH 环境变量以支持插件编译..."
+                # 在现有 SDKROOT 配置后添加注释说明这是 P-Nvim 添加的
+                sed -i.bak '/^export SDKROOT=/a\
+export CPATH="$SDKROOT/usr/include"  # P-Nvim: for Neovim plugins compilation
+' "$SHELL_CONFIG" && rm -f "${SHELL_CONFIG}.bak"
+                print_success "已添加 CPATH 配置"
+            fi
+
+            # 为当前会话设置环境变量
+            export SDKROOT="$CONFIGURED_SDK"
+            export CPATH="$CONFIGURED_SDK/usr/include"
+            return
+        else
+            print_warning "配置的 SDK 路径不存在: $CONFIGURED_SDK"
+        fi
+    fi
+
+    # 如果没有配置或配置无效，则配置 SDK
+    print_info "配置 macOS SDK 环境..."
+
+    # 检测可用的 SDK
+    local SDK_PATH=""
+    if [ -d "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
+        # 优先使用 Xcode SDK（通过符号链接会指向最新版本）
+        SDK_PATH="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+        print_success "检测到 Xcode SDK"
+    elif [ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk" ]; then
+        SDK_PATH="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+        print_success "检测到 Command Line Tools SDK"
+    else
+        print_warning "未检测到可用的 macOS SDK"
+        print_info "某些 Neovim 插件可能无法编译"
+        print_info "建议安装 Command Line Tools: xcode-select --install"
+        return
+    fi
+
+    # 询问是否添加配置
+    read -p "是否要将 SDK 配置添加到 $SHELL_CONFIG? (推荐) (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_warning "跳过 SDK 配置，某些插件可能编译失败"
+        return
+    fi
+
+    # 添加配置（带标记，方便卸载时清理）
+    cat >> "$SHELL_CONFIG" << EOF
+
+# P-Nvim: macOS SDK 配置 (for Neovim plugins compilation)
+# AUTO-GENERATED - DO NOT EDIT MANUALLY
+export SDKROOT="$SDK_PATH"
+export CPATH="\$SDKROOT/usr/include"
+# END P-Nvim SDK Config
+EOF
+
+    print_success "SDK 配置已添加到 $SHELL_CONFIG"
+    print_info "配置将在下次打开终端时生效"
+
+    # 为当前会话设置环境变量
+    export SDKROOT="$SDK_PATH"
+    export CPATH="$SDK_PATH/usr/include"
+}
+
 # 首次启动 Neovim
 first_launch() {
     print_info "准备首次启动 Neovim..."
@@ -356,11 +446,29 @@ first_launch() {
 
     read -p "按 Enter 继续..."
 
-    # 首次启动让 lazy.nvim 安装插件
-    print_info "启动 Neovim 安装插件..."
-    nvim --headless "+Lazy! sync" +qa
+    # 在 macOS 上使用 SDK 环境变量（如果已配置）
+    if [[ "$OS" == "macos" ]] && [ -n "$SDKROOT" ]; then
+        print_info "使用 SDK: $SDKROOT"
+        print_info "启动 Neovim 安装插件..."
+        SDKROOT="$SDKROOT" \
+        CPATH="$CPATH" \
+        CPPFLAGS="-isysroot $SDKROOT" \
+        LDFLAGS="-L$SDKROOT/usr/lib" \
+        nvim --headless "+Lazy! sync" +qa
+    else
+        # 首次启动让 lazy.nvim 安装插件
+        print_info "启动 Neovim 安装插件..."
+        nvim --headless "+Lazy! sync" +qa
+    fi
 
-    print_success "插件安装完成"
+    if [ $? -eq 0 ]; then
+        print_success "插件安装完成"
+    else
+        print_warning "插件安装可能遇到问题"
+        if [[ "$OS" == "macos" ]]; then
+            print_info "如果遇到编译错误，可以运行: ./fix-compile-headers.sh"
+        fi
+    fi
 }
 
 # 安装 Python 依赖
@@ -459,6 +567,10 @@ main() {
 
     # 安装字体
     install_nerd_font
+    echo
+
+    # 配置 macOS SDK (仅 macOS)
+    setup_macos_sdk
     echo
 
     # 安装 Python 依赖

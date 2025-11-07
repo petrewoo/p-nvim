@@ -231,17 +231,19 @@ keymap('v', '<leader>au', ':AvanteAsk write unit tests<CR>', ai_opts)
 
 ### 快捷键速查
 
+> **注意**: `<Space>` 表示空格键，即 Leader 键
+
 | 快捷键 | 功能 |
 |--------|------|
-| `,aa` | 打开 AI 助手 |
-| `,ac` | 开始聊天 |
-| `,at` | 切换显示 |
-| `,ax` | 清除历史 |
-| `,ae` | 解释代码 |
-| `,ao` | 优化代码 |
-| `,af` | 查找 Bug |
-| `,ad` | 添加文档 |
-| `,au` | 生成测试 |
+| `<Space>aa` | 打开 AI 助手 |
+| `<Space>ac` | 开始聊天 |
+| `<Space>at` | 切换显示 |
+| `<Space>ax` | 清除历史 |
+| `<Space>ae` | 解释代码 |
+| `<Space>ao` | 优化代码 |
+| `<Space>af` | 查找 Bug |
+| `<Space>ad` | 添加文档 |
+| `<Space>au` | 生成测试 |
 
 **差异对比模式**:
 | 快捷键 | 功能 |
@@ -263,12 +265,12 @@ keymap('v', '<leader>au', ':AvanteAsk write unit tests<CR>', ai_opts)
 
 **操作**:
 1. 选中代码（可视模式 `v`）
-2. 按 `,ae`
+2. 按 `<Space>ae`
 3. Claude 会详细解释代码逻辑
 
 **示例**:
 ```python
-# 选中这段代码然后按 ,ae
+# 选中这段代码然后按 <Space>ae
 def fibonacci(n):
     return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)
 ```
@@ -279,12 +281,12 @@ def fibonacci(n):
 
 **操作**:
 1. 选中代码
-2. 按 `,ao`
+2. 按 `<Space>ao`
 3. Claude 会提供优化建议
 
 **示例**:
 ```python
-# 选中后按 ,ao，Claude 会建议使用动态规划或记忆化
+# 选中后按 <Space>ao，Claude 会建议使用动态规划或记忆化
 def fibonacci(n):
     return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)
 ```
@@ -295,7 +297,7 @@ def fibonacci(n):
 
 **操作**:
 1. 选中相关代码
-2. 按 `,af`
+2. 按 `<Space>af`
 3. Claude 会分析潜在问题
 
 ### 4. 文档生成
@@ -304,12 +306,12 @@ def fibonacci(n):
 
 **操作**:
 1. 选中函数
-2. 按 `,ad`
+2. 按 `<Space>ad`
 3. Claude 会生成文档注释
 
 **示例**:
 ```python
-# 选中函数后按 ,ad
+# 选中函数后按 <Space>ad
 def calculate_total(items, tax_rate):
     subtotal = sum(item['price'] for item in items)
     tax = subtotal * tax_rate
@@ -334,7 +336,7 @@ Returns:
 
 **操作**:
 1. 选中函数
-2. 按 `,au`
+2. 按 `<Space>au`
 3. Claude 会生成单元测试
 
 ### 6. 代码重构
@@ -342,7 +344,7 @@ Returns:
 **场景**: 代码需要重构
 
 **步骤**:
-1. 打开 AI 助手: `,aa`
+1. 打开 AI 助手: `<Space>aa`
 2. 输入: "Refactor this code to use better patterns"
 3. 选中代码并按 Enter
 4. 查看建议并应用
@@ -352,7 +354,7 @@ Returns:
 **场景**: 想了解某个技术概念
 
 **操作**:
-1. 按 `,ac` 开始聊天
+1. 按 `<Space>ac` 开始聊天
 2. 输入问题，如: "Explain async/await in Python"
 3. Claude 会详细解答
 
@@ -361,7 +363,7 @@ Returns:
 **场景**: 从零开始编写功能
 
 **操作**:
-1. 按 `,aa`
+1. 按 `<Space>aa`
 2. 描述需求: "Write a function to validate email addresses"
 3. Claude 会生成代码
 4. 使用 `ct` 接受建议
@@ -375,7 +377,7 @@ Returns:
 ```
 1. 打开包含复杂代码的文件
 2. 选中不理解的部分
-3. 按 ,ae 请求解释
+3. 按 <Space>ae 请求解释
 4. 阅读 Claude 的解释
 5. 根据需要提问
 ```
@@ -385,7 +387,7 @@ Returns:
 ```
 1. 发现代码有 bug
 2. 选中可能有问题的代码
-3. 按 ,af 查找问题
+3. 按 <Space>af 查找问题
 4. Claude 指出问题并提供修复
 5. 使用 ct 应用修复
 6. 运行测试验证
@@ -396,7 +398,7 @@ Returns:
 ```
 1. 识别性能瓶颈
 2. 选中相关代码
-3. 按 ,ao 请求优化
+3. 按 <Space>ao 请求优化
 4. 比较原代码和优化后的代码
 5. 使用 ]x 和 [x 浏览差异
 6. 选择性应用改进（co/ct/cb）
@@ -405,12 +407,12 @@ Returns:
 ### 工作流 4: 编写新功能
 
 ```
-1. 按 ,aa 打开 AI 助手
+1. 按 <Space>aa 打开 AI 助手
 2. 描述功能需求
 3. Claude 生成代码框架
 4. 按 ct 接受建议
 5. 继续对话完善细节
-6. 按 ,au 生成测试
+6. 按 <Space>au 生成测试
 ```
 
 ---
@@ -613,10 +615,10 @@ return {
 
 记住这些快捷键，它们会极大提高你的编码效率：
 
-- `,aa` - 打开 AI 助手
-- `,ae` - 解释代码
-- `,ao` - 优化代码
-- `,af` - 查找 Bug
-- `,au` - 生成测试
+- `<Space>aa` - 打开 AI 助手
+- `<Space>ae` - 解释代码
+- `<Space>ao` - 优化代码
+- `<Space>af` - 查找 Bug
+- `<Space>au` - 生成测试
 
 **祝你使用愉快！如果有任何问题，查看故障排除部分或提 Issue。** 🚀

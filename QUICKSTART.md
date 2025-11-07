@@ -222,20 +222,22 @@ tj/tk       - 下一个/上一个标签页
 
 ### 修改主题
 
-编辑 `~/.config/nvim/lua/core.lua`:
+当前使用 **Nord** 主题。如需修改，编辑 `~/.config/nvim/lua/core.lua`:
 
 ```lua
 -- 找到这一行并修改为你喜欢的主题
-vim.cmd('colorscheme solarized')  -- 或 molokai
+vim.cmd('colorscheme nord')  -- 可选: solarized, molokai
 ```
 
 ### 修改 Leader 键
 
-编辑 `~/.config/nvim/lua/core.lua`:
+当前 Leader 键已设置为 **空格键 (Space)**。
+
+如需修改，编辑 `~/.config/nvim/lua/core.lua`:
 
 ```lua
 -- 修改这一行
-vim.g.mapleader = ','  -- 改成你想要的键，如 ' '（空格）
+vim.g.mapleader = ' '  -- 空格键，也可以改成其他键，如 ','
 ```
 
 ### 添加快捷键

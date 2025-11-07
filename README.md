@@ -24,7 +24,7 @@
 ### 核心功能
 - 🚀 使用 [lazy.nvim](https://github.com/folke/lazy.nvim) 进行插件管理
 - 🤖 **集成 Claude AI** - 在编辑器中直接使用 AI 助手
-- 🎨 Solarized 和 Molokai 主题支持
+- 🎨 Nord、Solarized 和 Molokai 主题支持
 - 📁 模块化配置结构，易于维护和定制
 - ⚡ 快速启动和响应
 - 💾 持久化撤销历史
@@ -175,7 +175,7 @@ nvim/
 ## 快捷键
 
 ### Leader Key
-- Leader 键: `,`
+- Leader 键: `空格键 (Space)`
 
 ### 功能键
 - `F2` - 切换行号
@@ -254,10 +254,10 @@ nvim/
 
 ### 修改主题
 
-编辑 [lua/core.lua](nvim/lua/core.lua):
+当前使用的是 **Nord** 主题。如需修改，编辑 [lua/core.lua](nvim/lua/core.lua):
 ```lua
 -- 修改这一行为你喜欢的主题
-vim.cmd('colorscheme solarized')  -- 可选: molokai, gruvbox, etc.
+vim.cmd('colorscheme nord')  -- 可选: solarized, molokai 等
 ```
 
 ### 添加新插件
