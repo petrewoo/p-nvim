@@ -47,7 +47,7 @@ show_menu() {
     echo "3) 只清理缓存和插件 (保留配置)"
     echo "4) 清理插件缓存 (保留配置和数据)"
     echo "5) 重置为初始状态 (重新安装)"
-    echo "6) 清理 Shell SDK 配置 (仅清理 P-Nvim 添加的 SDK 设置)"
+    echo "6) 清理 Shell 配置 (SDK 设置 + Vim 别名)"
     echo "7) 显示当前占用空间"
     echo "0) 退出"
     echo
@@ -147,6 +147,47 @@ clean_sdk_config() {
     fi
 }
 
+# 清理 Shell 配置中的 Vim 别名设置
+clean_vim_alias() {
+    print_info "检查 Shell 配置中的 Vim 别名设置..."
+
+    # 确定 shell 配置文件
+    local shell_configs=()
+    [ -f ~/.zshrc ] && shell_configs+=("$HOME/.zshrc")
+    [ -f ~/.bashrc ] && shell_configs+=("$HOME/.bashrc")
+    [ -f ~/.profile ] && shell_configs+=("$HOME/.profile")
+
+    local cleaned=0
+    for config in "${shell_configs[@]}"; do
+        # 检查是否有 P-Nvim 添加的 Vim 别名配置
+        if grep -q "# P-Nvim.*Vim" "$config" 2>/dev/null; then
+            print_info "在 $config 中发现 P-Nvim Vim 别名配置"
+            read -r -p "是否要移除? (y/n) " -n 1
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # 移除 P-Nvim 添加的 Vim 别名配置块
+                sed -i.bak '/# P-Nvim.*Vim/,/# END P-Nvim Vim Alias/d' "$config"
+                rm -f "${config}.bak"
+                print_success "已从 $config 移除 Vim 别名配置"
+                cleaned=1
+            fi
+        fi
+    done
+
+    if [ $cleaned -eq 0 ]; then
+        print_info "未发现 P-Nvim 添加的 Vim 别名配置"
+    else
+        print_info "Vim 别名配置已清理，建议重新打开终端使更改生效"
+    fi
+}
+
+# 清理所有 Shell 配置（SDK + Vim 别名）
+clean_all_shell_config() {
+    clean_sdk_config
+    echo
+    clean_vim_alias
+}
+
 # 完全卸载
 full_uninstall() {
     print_warning "这将删除所有 P-Nvim 相关文件！"
@@ -183,9 +224,9 @@ full_uninstall() {
     rm -rf ~/.local/state/nvim
     print_success "删除状态目录"
 
-    # 清理 SDK 配置
+    # 清理 Shell 配置（SDK + Vim 别名）
     echo
-    clean_sdk_config
+    clean_all_shell_config
 
     print_success "P-Nvim 已完全卸载！"
 }
@@ -384,7 +425,7 @@ main() {
                 reset_to_initial
                 ;;
             6)
-                clean_sdk_config
+                clean_all_shell_config
                 ;;
             7)
                 show_disk_usage

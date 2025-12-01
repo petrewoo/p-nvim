@@ -441,6 +441,52 @@ EOF
     export CPATH="$SDK_PATH/usr/include"
 }
 
+# 设置 vim/nvim 别名
+setup_vim_alias() {
+    print_info "设置 Vim/Neovim 别名..."
+
+    # 确定 shell 配置文件
+    if [ -f ~/.zshrc ]; then
+        SHELL_CONFIG=~/.zshrc
+    elif [ -f ~/.bashrc ]; then
+        SHELL_CONFIG=~/.bashrc
+    else
+        SHELL_CONFIG=~/.profile
+    fi
+
+    # 检查是否已经配置了 alias
+    if grep -q "alias vim='nvim'" "$SHELL_CONFIG" 2>/dev/null; then
+        print_success "Vim/Neovim 别名已配置"
+        return
+    fi
+
+    # 询问是否设置别名
+    print_info "是否要设置以下别名？"
+    echo "  • vi  -> 原生 vim"
+    echo "  • vim -> nvim (Neovim)"
+    read -r -p "这样输入 vim 时会启动 Neovim (y/n) " -n 1
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "跳过别名设置"
+        return
+    fi
+
+    # 添加别名配置（带标记，方便卸载时清理）
+    cat >> "$SHELL_CONFIG" << 'EOF'
+
+# P-Nvim: Vim/Neovim 别名设置
+# AUTO-GENERATED - DO NOT EDIT MANUALLY
+alias vi='command vim'    # vi 使用原生 vim
+alias vim='nvim'          # vim 使用 neovim
+# END P-Nvim Vim Alias
+EOF
+
+    print_success "别名已添加到 $SHELL_CONFIG"
+    print_info "重新打开终端后生效，届时："
+    echo "  • 输入 vi  -> 启动原生 Vim"
+    echo "  • 输入 vim -> 启动 Neovim"
+}
+
 # 首次启动 Neovim
 first_launch() {
     print_info "准备首次启动 Neovim..."
@@ -576,6 +622,10 @@ main() {
 
     # 配置 macOS SDK (仅 macOS)
     setup_macos_sdk
+    echo
+
+    # 设置 vim/nvim 别名
+    setup_vim_alias
     echo
 
     # 安装 Python 依赖
