@@ -29,6 +29,23 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 解析符号链接（用于处理 .zshrc 等配置文件是符号链接的情况）
+resolve_symlink() {
+    local file="$1"
+    if [ -L "$file" ]; then
+        # 获取符号链接的目标
+        local target
+        target=$(readlink "$file")
+        # 如果是相对路径，转换为绝对路径
+        if [[ "$target" != /* ]]; then
+            target="$(dirname "$file")/$target"
+        fi
+        echo "$target"
+    else
+        echo "$file"
+    fi
+}
+
 # 打印欢迎信息
 print_banner() {
     cat << 'EOF'
@@ -360,16 +377,29 @@ setup_macos_sdk() {
 
     print_info "检查 macOS SDK 配置..."
 
-    # 确定 shell 配置文件
+    # 确定 shell 配置文件（解析符号链接）
     if [ -f ~/.zshrc ]; then
-        SHELL_CONFIG=~/.zshrc
+        SHELL_CONFIG=$(resolve_symlink ~/.zshrc)
     elif [ -f ~/.bashrc ]; then
-        SHELL_CONFIG=~/.bashrc
+        SHELL_CONFIG=$(resolve_symlink ~/.bashrc)
     else
-        SHELL_CONFIG=~/.profile
+        SHELL_CONFIG=$(resolve_symlink ~/.profile)
     fi
 
-    # 检查是否已经配置了 SDKROOT
+    # 检查是否已经存在 P-Nvim 添加的 SDK 配置块
+    if grep -q "# P-Nvim.*SDK" "$SHELL_CONFIG" 2>/dev/null; then
+        print_success "P-Nvim SDK 配置已存在，跳过"
+        # 为当前会话设置环境变量
+        local existing_sdk
+        existing_sdk=$(grep "^export SDKROOT=" "$SHELL_CONFIG" | tail -1 | sed 's/export SDKROOT=//' | tr -d '"' | tr -d "'")
+        if [ -d "$existing_sdk" ]; then
+            export SDKROOT="$existing_sdk"
+            export CPATH="$existing_sdk/usr/include"
+        fi
+        return
+    fi
+
+    # 检查是否已经配置了 SDKROOT（用户自己配置的）
     if grep -q "^export SDKROOT=" "$SHELL_CONFIG" 2>/dev/null; then
         EXISTING_SDKROOT=$(grep "^export SDKROOT=" "$SHELL_CONFIG" | head -1)
         CONFIGURED_SDK=$(echo "$EXISTING_SDKROOT" | sed 's/export SDKROOT=//' | tr -d '"' | tr -d "'")
@@ -445,13 +475,13 @@ EOF
 setup_vim_alias() {
     print_info "设置 Vim/Neovim 别名..."
 
-    # 确定 shell 配置文件
+    # 确定 shell 配置文件（解析符号链接）
     if [ -f ~/.zshrc ]; then
-        SHELL_CONFIG=~/.zshrc
+        SHELL_CONFIG=$(resolve_symlink ~/.zshrc)
     elif [ -f ~/.bashrc ]; then
-        SHELL_CONFIG=~/.bashrc
+        SHELL_CONFIG=$(resolve_symlink ~/.bashrc)
     else
-        SHELL_CONFIG=~/.profile
+        SHELL_CONFIG=$(resolve_symlink ~/.profile)
     fi
 
     # 检查是否已经配置了 alias
@@ -485,6 +515,45 @@ EOF
     print_info "重新打开终端后生效，届时："
     echo "  • 输入 vi  -> 启动原生 Vim"
     echo "  • 输入 vim -> 启动 Neovim"
+}
+
+# 设置 git 默认编辑器
+setup_git_editor() {
+    print_info "设置 Git 默认编辑器..."
+
+    # 检查是否已经设置为 nvim
+    local current_editor
+    current_editor=$(git config --global core.editor 2>/dev/null || echo "")
+
+    if [ "$current_editor" = "nvim" ]; then
+        print_success "Git 编辑器已设置为 nvim"
+        return
+    fi
+
+    # 显示当前设置
+    if [ -n "$current_editor" ]; then
+        print_info "当前 Git 编辑器: $current_editor"
+    else
+        print_info "当前 Git 编辑器: 未设置 (默认使用系统 EDITOR)"
+    fi
+
+    # 询问是否设置
+    read -r -p "是否将 Git 默认编辑器设置为 nvim? (y/n) " -n 1
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "跳过 Git 编辑器设置"
+        return
+    fi
+
+    # 备份原来的设置（如果有）
+    if [ -n "$current_editor" ]; then
+        git config --global p-nvim.previous-editor "$current_editor"
+        print_info "已备份原编辑器设置: $current_editor"
+    fi
+
+    # 设置 nvim 为默认编辑器
+    git config --global core.editor "nvim"
+    print_success "Git 默认编辑器已设置为 nvim"
 }
 
 # 首次启动 Neovim
@@ -626,6 +695,10 @@ main() {
 
     # 设置 vim/nvim 别名
     setup_vim_alias
+    echo
+
+    # 设置 git 默认编辑器
+    setup_git_editor
     echo
 
     # 安装 Python 依赖

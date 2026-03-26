@@ -28,6 +28,23 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 解析符号链接（用于处理 .zshrc 等配置文件是符号链接的情况）
+resolve_symlink() {
+    local file="$1"
+    if [ -L "$file" ]; then
+        # 获取符号链接的目标
+        local target
+        target=$(readlink "$file")
+        # 如果是相对路径，转换为绝对路径
+        if [[ "$target" != /* ]]; then
+            target="$(dirname "$file")/$target"
+        fi
+        echo "$target"
+    else
+        echo "$file"
+    fi
+}
+
 # 打印横幅
 print_banner() {
     cat << 'EOF'
@@ -47,7 +64,7 @@ show_menu() {
     echo "3) 只清理缓存和插件 (保留配置)"
     echo "4) 清理插件缓存 (保留配置和数据)"
     echo "5) 重置为初始状态 (重新安装)"
-    echo "6) 清理 Shell 配置 (SDK 设置 + Vim 别名)"
+    echo "6) 清理 Shell/Git 配置 (SDK + Vim 别名 + Git 编辑器)"
     echo "7) 显示当前占用空间"
     echo "0) 退出"
     echo
@@ -112,18 +129,18 @@ backup_config() {
 clean_sdk_config() {
     print_info "检查 Shell 配置中的 SDK 设置..."
 
-    # 确定 shell 配置文件
+    # 确定 shell 配置文件（解析符号链接）
     local shell_configs=()
-    [ -f ~/.zshrc ] && shell_configs+=("$HOME/.zshrc")
-    [ -f ~/.bashrc ] && shell_configs+=("$HOME/.bashrc")
-    [ -f ~/.profile ] && shell_configs+=("$HOME/.profile")
+    [ -f ~/.zshrc ] && shell_configs+=("$(resolve_symlink "$HOME/.zshrc")")
+    [ -f ~/.bashrc ] && shell_configs+=("$(resolve_symlink "$HOME/.bashrc")")
+    [ -f ~/.profile ] && shell_configs+=("$(resolve_symlink "$HOME/.profile")")
 
     local cleaned=0
     for config in "${shell_configs[@]}"; do
         # 检查是否有 P-Nvim 添加的 SDK 配置
         if grep -q "# P-Nvim.*SDK" "$config" 2>/dev/null; then
             print_info "在 $config 中发现 P-Nvim SDK 配置"
-            read -p "是否要移除? (y/n) " -n 1 -r
+            read -r -p "是否要移除? (y/n) " -n 1
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 # 移除 P-Nvim 添加的 SDK 配置块
@@ -151,11 +168,11 @@ clean_sdk_config() {
 clean_vim_alias() {
     print_info "检查 Shell 配置中的 Vim 别名设置..."
 
-    # 确定 shell 配置文件
+    # 确定 shell 配置文件（解析符号链接）
     local shell_configs=()
-    [ -f ~/.zshrc ] && shell_configs+=("$HOME/.zshrc")
-    [ -f ~/.bashrc ] && shell_configs+=("$HOME/.bashrc")
-    [ -f ~/.profile ] && shell_configs+=("$HOME/.profile")
+    [ -f ~/.zshrc ] && shell_configs+=("$(resolve_symlink "$HOME/.zshrc")")
+    [ -f ~/.bashrc ] && shell_configs+=("$(resolve_symlink "$HOME/.bashrc")")
+    [ -f ~/.profile ] && shell_configs+=("$(resolve_symlink "$HOME/.profile")")
 
     local cleaned=0
     for config in "${shell_configs[@]}"; do
@@ -181,11 +198,51 @@ clean_vim_alias() {
     fi
 }
 
-# 清理所有 Shell 配置（SDK + Vim 别名）
+# 清理 Git 编辑器配置
+clean_git_editor() {
+    print_info "检查 Git 编辑器配置..."
+
+    local current_editor
+    current_editor=$(git config --global core.editor 2>/dev/null || echo "")
+
+    if [ "$current_editor" != "nvim" ]; then
+        print_info "Git 编辑器未设置为 nvim，无需清理"
+        return
+    fi
+
+    # 检查是否有备份的原编辑器设置
+    local previous_editor
+    previous_editor=$(git config --global p-nvim.previous-editor 2>/dev/null || echo "")
+
+    print_info "当前 Git 编辑器: nvim"
+    if [ -n "$previous_editor" ]; then
+        print_info "原编辑器备份: $previous_editor"
+        read -r -p "是否还原为原来的编辑器 ($previous_editor)? (y/n) " -n 1
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            git config --global core.editor "$previous_editor"
+            git config --global --unset p-nvim.previous-editor
+            print_success "Git 编辑器已还原为: $previous_editor"
+            return
+        fi
+    fi
+
+    read -r -p "是否移除 Git 编辑器设置 (恢复为系统默认)? (y/n) " -n 1
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git config --global --unset core.editor
+        git config --global --unset p-nvim.previous-editor 2>/dev/null || true
+        print_success "Git 编辑器设置已移除"
+    fi
+}
+
+# 清理所有 Shell 配置（SDK + Vim 别名 + Git 编辑器）
 clean_all_shell_config() {
     clean_sdk_config
     echo
     clean_vim_alias
+    echo
+    clean_git_editor
 }
 
 # 完全卸载
