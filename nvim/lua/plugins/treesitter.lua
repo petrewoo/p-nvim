@@ -8,6 +8,11 @@ return {
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
+    init = function()
+      -- Use the bash parser for zsh buffers; no dedicated zsh parser ships
+      -- with nvim-treesitter, and rainbow-delimiters crashes on a nil parser.
+      vim.treesitter.language.register('bash', 'zsh')
+    end,
     config = function()
       require('nvim-treesitter.configs').setup({
         -- Install parsers synchronously (only applied to `ensure_installed`)

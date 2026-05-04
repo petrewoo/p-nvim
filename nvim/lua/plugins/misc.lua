@@ -124,6 +124,11 @@ return {
   {
     'ahmedkhalf/project.nvim',
     config = function()
+      -- project.nvim is unmaintained and still calls vim.lsp.buf_get_clients,
+      -- which is deprecated. Override with the modern API to silence the warning.
+      vim.lsp.buf_get_clients = function(bufnr)
+        return vim.lsp.get_clients({ bufnr = bufnr })
+      end
       require('project_nvim').setup({
         detection_methods = { 'pattern', 'lsp' },
         patterns = { '.git', 'Makefile', 'package.json', 'go.mod', 'Cargo.toml' },
