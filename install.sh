@@ -258,11 +258,21 @@ install_optional_tools() {
     fi
 }
 
+# ~/.config/nvim 是否已经是指向本仓库 nvim/ 的软链
+config_is_linked_to_repo() {
+    local script_dir nvim_config="$HOME/.config/nvim"
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    [ -L "$nvim_config" ] || return 1
+    [ "$(cd "$nvim_config" 2>/dev/null && pwd -P)" = "$(cd "$script_dir/nvim" && pwd -P)" ]
+}
+
 # 备份现有配置
 backup_existing_config() {
     local nvim_config="$HOME/.config/nvim"
 
-    if [ -d "$nvim_config" ] || [ -L "$nvim_config" ]; then
+    if config_is_linked_to_repo; then
+        print_success "$nvim_config 已链接到本仓库，跳过备份"
+    elif [ -d "$nvim_config" ] || [ -L "$nvim_config" ]; then
         print_warning "检测到现有的 Neovim 配置"
         local backup_dir
         backup_dir="$HOME/.config/nvim.backup.$(date +%Y%m%d_%H%M%S)"
@@ -298,6 +308,11 @@ backup_existing_config() {
 # 安装配置文件
 install_config() {
     print_info "安装 P-Nvim 配置..."
+
+    if config_is_linked_to_repo; then
+        print_success "配置已通过软链指向本仓库，无需复制"
+        return
+    fi
 
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -370,12 +385,27 @@ install_nerd_font() {
 }
 
 # 配置 macOS SDK (仅 macOS)
+# SDK 路径一律用 xcrun 在运行时检测，不写死版本号，避免系统或 Xcode 升级后失效。
 setup_macos_sdk() {
     if [[ "$OS" != "macos" ]]; then
         return
     fi
 
     print_info "检查 macOS SDK 配置..."
+
+    # 为当前会话设置环境变量。先清掉继承来的旧值：xcrun 会原样返回已有的 SDKROOT。
+    unset SDKROOT CPATH
+    local sdk_path
+    sdk_path="$(xcrun --show-sdk-path 2>/dev/null)"
+    if [ ! -d "$sdk_path" ]; then
+        print_warning "未检测到可用的 macOS SDK"
+        print_info "某些 Neovim 插件可能无法编译"
+        print_info "建议安装 Command Line Tools: xcode-select --install"
+        return
+    fi
+    export SDKROOT="$sdk_path"
+    export CPATH="$sdk_path/usr/include"
+    print_success "检测到 SDK: $sdk_path"
 
     # 确定 shell 配置文件（解析符号链接）
     if [ -f ~/.zshrc ]; then
@@ -386,62 +416,9 @@ setup_macos_sdk() {
         SHELL_CONFIG=$(resolve_symlink ~/.profile)
     fi
 
-    # 检查是否已经存在 P-Nvim 添加的 SDK 配置块
-    if grep -q "# P-Nvim.*SDK" "$SHELL_CONFIG" 2>/dev/null; then
-        print_success "P-Nvim SDK 配置已存在，跳过"
-        # 为当前会话设置环境变量
-        local existing_sdk
-        existing_sdk=$(grep "^export SDKROOT=" "$SHELL_CONFIG" | tail -1 | sed 's/export SDKROOT=//' | tr -d '"' | tr -d "'")
-        if [ -d "$existing_sdk" ]; then
-            export SDKROOT="$existing_sdk"
-            export CPATH="$existing_sdk/usr/include"
-        fi
-        return
-    fi
-
-    # 检查是否已经配置了 SDKROOT（用户自己配置的）
-    if grep -q "^export SDKROOT=" "$SHELL_CONFIG" 2>/dev/null; then
-        EXISTING_SDKROOT=$(grep "^export SDKROOT=" "$SHELL_CONFIG" | head -1)
-        CONFIGURED_SDK=$(echo "$EXISTING_SDKROOT" | sed 's/export SDKROOT=//' | tr -d '"' | tr -d "'")
-
-        if [ -d "$CONFIGURED_SDK" ]; then
-            print_success "SDK 已正确配置: $CONFIGURED_SDK"
-
-            # 检查是否有 CPATH 配置
-            if ! grep -q "^export CPATH=.*SDKROOT" "$SHELL_CONFIG" 2>/dev/null; then
-                print_info "添加 CPATH 环境变量以支持插件编译..."
-                # 在现有 SDKROOT 配置后添加注释说明这是 P-Nvim 添加的
-                sed -i.bak '/^export SDKROOT=/a\
-export CPATH="$SDKROOT/usr/include"  # P-Nvim: for Neovim plugins compilation
-' "$SHELL_CONFIG" && rm -f "${SHELL_CONFIG}.bak"
-                print_success "已添加 CPATH 配置"
-            fi
-
-            # 为当前会话设置环境变量
-            export SDKROOT="$CONFIGURED_SDK"
-            export CPATH="$CONFIGURED_SDK/usr/include"
-            return
-        else
-            print_warning "配置的 SDK 路径不存在: $CONFIGURED_SDK"
-        fi
-    fi
-
-    # 如果没有配置或配置无效，则配置 SDK
-    print_info "配置 macOS SDK 环境..."
-
-    # 检测可用的 SDK
-    local SDK_PATH=""
-    if [ -d "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
-        # 优先使用 Xcode SDK（通过符号链接会指向最新版本）
-        SDK_PATH="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-        print_success "检测到 Xcode SDK"
-    elif [ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk" ]; then
-        SDK_PATH="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-        print_success "检测到 Command Line Tools SDK"
-    else
-        print_warning "未检测到可用的 macOS SDK"
-        print_info "某些 Neovim 插件可能无法编译"
-        print_info "建议安装 Command Line Tools: xcode-select --install"
+    # shell 配置里已经有 SDK 设置：P-Nvim 添加的、用户自己写的、或基于 xcrun 的自适应配置
+    if grep -q -e "# P-Nvim.*SDK" -e "xcrun --show-sdk-path" -e "^[[:space:]]*export SDKROOT=" "$SHELL_CONFIG" 2>/dev/null; then
+        print_success "shell 配置中已有 SDK 设置，不做修改"
         return
     fi
 
@@ -453,22 +430,18 @@ export CPATH="$SDKROOT/usr/include"  # P-Nvim: for Neovim plugins compilation
         return
     fi
 
-    # 添加配置（带标记，方便卸载时清理）
-    cat >> "$SHELL_CONFIG" << EOF
+    # 添加配置（带标记，方便卸载时清理）。路径在每次 shell 启动时检测。
+    cat >> "$SHELL_CONFIG" << 'EOF'
 
 # P-Nvim: macOS SDK 配置 (for Neovim plugins compilation)
 # AUTO-GENERATED - DO NOT EDIT MANUALLY
-export SDKROOT="$SDK_PATH"
-export CPATH="\$SDKROOT/usr/include"
+export SDKROOT="$(env -u SDKROOT xcrun --show-sdk-path 2>/dev/null)"
+export CPATH="$SDKROOT/usr/include"
 # END P-Nvim SDK Config
 EOF
 
     print_success "SDK 配置已添加到 $SHELL_CONFIG"
     print_info "配置将在下次打开终端时生效"
-
-    # 为当前会话设置环境变量
-    export SDKROOT="$SDK_PATH"
-    export CPATH="$SDK_PATH/usr/include"
 }
 
 # 设置 vim/nvim 别名

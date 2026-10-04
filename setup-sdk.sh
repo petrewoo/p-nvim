@@ -40,7 +40,7 @@ echo "  macOS 版本: $OS_VERSION"
 # 检查当前配置
 print_info "当前开发工具配置："
 XCODE_PATH=$(xcode-select -p)
-CURRENT_SDK=$(xcrun --show-sdk-path)
+CURRENT_SDK=$(env -u SDKROOT xcrun --show-sdk-path)
 echo "  xcode-select: $XCODE_PATH"
 echo "  当前 SDK: $CURRENT_SDK"
 echo
@@ -101,6 +101,12 @@ else
     SHELL_CONFIG=~/.profile
 fi
 
+if grep -q "xcrun --show-sdk-path" "$SHELL_CONFIG" 2>/dev/null; then
+    print_success "$SHELL_CONFIG 已使用 xcrun 自适应检测 SDK，无需修改"
+    print_info "如果仍有编译问题，请运行: ./fix-compile-headers.sh"
+    exit 0
+fi
+
 EXISTING_SDKROOT=$(grep "^export SDKROOT=" "$SHELL_CONFIG" 2>/dev/null | head -1)
 if [ -n "$EXISTING_SDKROOT" ]; then
     print_success "已找到现有的 SDKROOT 配置"
@@ -145,21 +151,13 @@ else
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_info "将添加到: $SHELL_CONFIG"
 
-        # 确定使用哪个 SDK
-        if [ -n "$XCODE_SDK" ]; then
-            RECOMMENDED_SDK="$XCODE_SDK"
-        else
-            RECOMMENDED_SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-        fi
-
-        cat >> "$SHELL_CONFIG" << EOF
+        cat >> "$SHELL_CONFIG" << 'EOF'
 
 # macOS SDK 配置 (for Neovim plugins compilation)
-export SDKROOT="$RECOMMENDED_SDK"
-export CPATH="\$SDKROOT/usr/include"
+export SDKROOT="$(env -u SDKROOT xcrun --show-sdk-path 2>/dev/null)"
+export CPATH="$SDKROOT/usr/include"
 EOF
-        print_success "已添加 SDK 环境变量"
-        echo "  SDKROOT=$RECOMMENDED_SDK"
+        print_success "已添加 SDK 环境变量（每次启动时用 xcrun 检测）"
         echo
         print_info "请运行以下命令使其生效:"
         echo "  source $SHELL_CONFIG"

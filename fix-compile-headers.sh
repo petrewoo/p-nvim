@@ -35,13 +35,11 @@ echo
 # 检查 SDK 路径
 print_info "检查 SDK 配置..."
 
-# 优先使用 Xcode SDK (如果存在)
-if [ -d "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk" ]; then
-    SDK_PATH="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"
-    print_success "找到 Xcode SDK: $SDK_PATH"
-elif [ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk" ]; then
-    SDK_PATH="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-    print_success "找到 Command Line Tools SDK: $SDK_PATH"
+# 用 xcrun 检测当前生效的 SDK。先清掉继承来的旧值：xcrun 会原样返回已有的 SDKROOT。
+unset SDKROOT CPATH
+SDK_PATH="$(xcrun --show-sdk-path 2>/dev/null)"
+if [ -d "$SDK_PATH" ]; then
+    print_success "找到 SDK: $SDK_PATH"
 else
     print_error "未找到可用的 macOS SDK"
     print_info "请运行: xcode-select --install"
