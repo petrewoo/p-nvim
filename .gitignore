@@ -1,6 +1,5 @@
 # Neovim
 nvim/plugin/
-nvim/lazy-lock.json
 
 # Undo files
 nvim/undo/
